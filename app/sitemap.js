@@ -1,24 +1,26 @@
-export default function sitemap() {
+import { createClient } from '@/lib/supabase';
+
+export default async function sitemap() {
+  const supabase = createClient();
+  const { data: shops } = await supabase
+    .from('coffee_shops')
+    .select('slug, updated_at')
+    .eq('status', 'active');
+
   const baseUrl = 'https://abottomlesscup.com';
 
-  // Base static routes
-  const routes = [
-    '',
-    '/browse',
-    '/about',
-    '/submit',
-    '/claim',
-    '/contact',
-  ].map((route) => ({
-    url: `${baseUrl}${route}`,
-    lastModified: new Date(),
-    changeFrequency: 'daily',
-    priority: route === '' ? 1.0 : 0.8,
+  const shopUrls = (shops || []).map((shop) => ({
+    url: `${baseUrl}/coffee-shop/${shop.slug}`,
+    lastModified: shop.updated_at || new Date().toISOString(),
   }));
 
-  // We could also dynamically fetch all active coffee shop slugs from Supabase here
-  // and append them to this array to ensure Google indexes every single listing automatically.
-  // For now, this establishes the foundational sitemap format.
+  const staticUrls = [
+    { url: baseUrl, lastModified: new Date().toISOString() },
+    { url: `${baseUrl}/browse`, lastModified: new Date().toISOString() },
+    { url: `${baseUrl}/about`, lastModified: new Date().toISOString() },
+    { url: `${baseUrl}/submit`, lastModified: new Date().toISOString() },
+    { url: `${baseUrl}/contact`, lastModified: new Date().toISOString() },
+  ];
 
-  return routes;
+  return [...staticUrls, ...shopUrls];
 }
