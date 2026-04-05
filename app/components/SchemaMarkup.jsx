@@ -24,7 +24,7 @@ export default function SchemaMarkup({ type, shop, name }) {
       '@type': 'CollectionPage',
       name,
       description: `A curated collection of independent coffee shops. ${name}.`,
-      provider: { '@type': 'Organization', name: 'Brew Guide' },
+      provider: { '@type': 'Organization', name: 'A Bottom Less Cup' },
     };
   }
 

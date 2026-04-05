@@ -1,181 +1,282 @@
 import { createClient } from '@/lib/supabase';
-import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import ShopCard from '@/app/components/ShopCard';
+import ClientShopGrid from './ClientShopGrid';
 import FAQSection from '@/app/components/FAQSection';
 import SchemaMarkup from '@/app/components/SchemaMarkup';
 
-// City slug pattern: coffee-shops-{city}-{state}
-// Category slug pattern: {category}-coffee-shops or coffee-shops-with-{feature}
+const CATEGORIES = [
+  { slug: 'study-coffee-shops', label: 'Study Spots', best_for: 'studying' },
+  { slug: 'coffee-shops-with-wifi', label: 'WiFi Friendly', tags: 'wifi' },
+  { slug: 'aesthetic-coffee-shops', label: 'Aesthetic', tags: 'aesthetic' },
+  { slug: 'coffee-shops-with-outlets', label: 'Outlets Available', tags: 'outlets' },
+  { slug: 'quiet-coffee-shops', label: 'Quiet', noise_level: 'quiet' },
+  { slug: 'pet-friendly-coffee-shops', label: 'Pet Friendly', tags: 'pet-friendly' },
+  { slug: 'coffee-shops-for-remote-work', label: 'Remote Work', best_for: 'remote work' },
+  { slug: 'cozy-coffee-shops', label: 'Cozy Vibes', tags: 'cozy' },
+];
+
+const US_CITIES = [
+  { slug: 'coffee-shops-new-york-ny', city: 'New York', state: 'NY' },
+  { slug: 'coffee-shops-los-angeles-ca', city: 'Los Angeles', state: 'CA' },
+  { slug: 'coffee-shops-chicago-il', city: 'Chicago', state: 'IL' },
+  { slug: 'coffee-shops-austin-tx', city: 'Austin', state: 'TX' },
+  { slug: 'coffee-shops-seattle-wa', city: 'Seattle', state: 'WA' },
+  { slug: 'coffee-shops-portland-or', city: 'Portland', state: 'OR' },
+  { slug: 'coffee-shops-denver-co', city: 'Denver', state: 'CO' },
+  { slug: 'coffee-shops-miami-fl', city: 'Miami', state: 'FL' },
+  { slug: 'coffee-shops-boston-ma', city: 'Boston', state: 'MA' },
+  { slug: 'coffee-shops-nashville-tn', city: 'Nashville', state: 'TN' },
+  { slug: 'coffee-shops-san-francisco-ca', city: 'San Francisco', state: 'CA' },
+  { slug: 'coffee-shops-washington-dc', city: 'Washington', state: 'DC' },
+];
+
 function parseSlug(slug) {
-  const cityMatch = slug.match(/^coffee-shops-(.+)-([a-z]{2})$/);
-  if (cityMatch) {
-    const city = cityMatch[1].replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    const state = cityMatch[2].toUpperCase();
-    return { type: 'city', city, state, slug };
-  }
+  // Check category match
+  const cat = CATEGORIES.find(c => c.slug === slug);
+  if (cat) return { type: 'category', category: cat };
 
-  const CATEGORY_MAP = {
-    'study-coffee-shops': { label: 'Study', best_for: 'study', description: 'quiet, focused environments with reliable WiFi' },
-    'coffee-shops-with-wifi': { label: 'WiFi Friendly', wifi: true, description: 'fast and reliable WiFi connections' },
-    'aesthetic-coffee-shops': { label: 'Aesthetic', aesthetic: true, description: 'beautifully designed, photo-worthy spaces' },
-    'remote-work-coffee-shops': { label: 'Remote Work', best_for: 'remote work', description: 'outlets, seating, and long-stay friendly vibes' },
-    'specialty-coffee-shops': { label: 'Specialty Coffee', description: 'craft roasts and barista excellence' },
-    'pet-friendly-coffee-shops': { label: 'Pet Friendly', description: 'welcoming spaces for you and your pet' },
-  };
+  // Check city match
+  const cityMatch = US_CITIES.find(c => c.slug === slug);
+  if (cityMatch) return { type: 'city', ...cityMatch };
 
-  if (CATEGORY_MAP[slug]) {
-    return { type: 'category', ...CATEGORY_MAP[slug], slug };
-  }
-
-  // City + Category combos: {category}-{city} or coffee-shops-with-{feature}-{city}
-  for (const [catSlug, catData] of Object.entries(CATEGORY_MAP)) {
-    const cityPart = slug.replace(catSlug + '-', '');
-    if (cityPart !== slug && cityPart.length > 0) {
-      const city = cityPart.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-      return { type: 'city+category', city, ...catData, slug };
+  // Try to parse city+category combo: e.g. "study-coffee-shops-new-york"
+  for (const cat of CATEGORIES) {
+    for (const city of US_CITIES) {
+      const combo = `${cat.slug}-${city.city.toLowerCase().replace(/\s+/g, '-')}`;
+      if (slug === combo) {
+        return { type: 'city_category', category: cat, city: city.city, state: city.state };
+      }
     }
   }
 
-  return null;
-}
-
-async function fetchShopsForPage(parsed) {
-  const supabase = createClient();
-  let query = supabase.from('coffee_shops').select('*').eq('status', 'active').limit(24);
-
-  if (parsed.type === 'city') {
-    query = query.ilike('city', parsed.city).eq('state', parsed.state);
-  } else if (parsed.type === 'category') {
-    if (parsed.wifi) query = query.eq('wifi_yes_no', true);
-    if (parsed.best_for) query = query.ilike('best_for', `%${parsed.best_for}%`);
-  } else if (parsed.type === 'city+category') {
-    query = query.ilike('city', parsed.city);
-    if (parsed.wifi) query = query.eq('wifi_yes_no', true);
-    if (parsed.best_for) query = query.ilike('best_for', `%${parsed.best_for}%`);
+  // Try dynamic city parse: coffee-shops-{city}-{state}
+  const cityPattern = /^coffee-shops-(.+)-([a-z]{2})$/;
+  const match = slug.match(cityPattern);
+  if (match) {
+    const city = match[1].split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    const state = match[2].toUpperCase();
+    return { type: 'city', city, state };
   }
 
-  const { data } = await query.order('created_at', { ascending: false });
-  return data || [];
+  return { type: 'unknown' };
 }
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const parsed = parseSlug(slug);
-  if (!parsed) return { title: 'Not Found' };
+  const siteName = 'A Bottom Less Cup';
 
   if (parsed.type === 'city') {
     return {
-      title: `Best Independent Coffee Shops in ${parsed.city}, ${parsed.state} — Brew Guide`,
-      description: `Discover the best independent coffee shops in ${parsed.city}, ${parsed.state}. Filter by WiFi, seating, noise level, and more.`,
+      title: `Best Independent Coffee Shops in ${parsed.city}, ${parsed.state} | ${siteName}`,
+      description: `Discover the best independent coffee shops in ${parsed.city}, ${parsed.state}. Browse by vibe, WiFi, seating, and more.`,
     };
   }
-  return {
-    title: `${parsed.label} Coffee Shops — Brew Guide`,
-    description: `Find the best ${parsed.label?.toLowerCase()} coffee shops across the U.S. Curated for ${parsed.description}.`,
-  };
+  if (parsed.type === 'category') {
+    return {
+      title: `${parsed.category.label} Coffee Shops in the US | ${siteName}`,
+      description: `Find the best ${parsed.category.label.toLowerCase()} coffee shops across the United States on ${siteName}.`,
+    };
+  }
+  if (parsed.type === 'city_category') {
+    return {
+      title: `Best ${parsed.category.label} Coffee Shops in ${parsed.city}, ${parsed.state} | ${siteName}`,
+      description: `Looking for ${parsed.category.label.toLowerCase()} coffee shops in ${parsed.city}? Browse curated picks on ${siteName}.`,
+    };
+  }
+  return { title: siteName };
 }
+
+async function fetchShops(parsed) {
+  const supabase = createClient();
+  let query = supabase.from('coffee_shops').select('*').eq('status', 'active');
+
+  if (parsed.type === 'city') {
+    query = query.ilike('city', parsed.city).ilike('state', parsed.state);
+  } else if (parsed.type === 'category') {
+    const cat = parsed.category;
+    if (cat.best_for) query = query.ilike('best_for', `%${cat.best_for}%`);
+    else if (cat.tags) query = query.ilike('tags', `%${cat.tags}%`);
+    else if (cat.noise_level) query = query.ilike('noise_level', `%${cat.noise_level}%`);
+  } else if (parsed.type === 'city_category') {
+    query = query.ilike('city', parsed.city).ilike('state', parsed.state);
+    const cat = parsed.category;
+    if (cat.best_for) query = query.ilike('best_for', `%${cat.best_for}%`);
+    else if (cat.tags) query = query.ilike('tags', `%${cat.tags}%`);
+  }
+
+  const { data, error } = await query.order('name').limit(100);
+  if (error) {
+    console.error('fetchShops error:', error.message);
+    return [];
+  }
+  return data || [];
+}
+
+const CITY_FAQS = (city, state) => [
+  { question: `What are the best independent coffee shops in ${city}, ${state}?`, answer: `A Bottom Less Cup curates the top-rated independent coffee shops in ${city}, ${state}, featuring places known for quality coffee, great atmosphere, and unique character.` },
+  { question: `Which coffee shops in ${city} have WiFi?`, answer: `Many shops listed in ${city} offer free WiFi. Filter by WiFi on each listing to find the best spots for remote work or studying.` },
+  { question: `Are there quiet coffee shops in ${city} for studying?`, answer: `Yes! Use the filters on this page to find quiet, study-friendly coffee shops in ${city} with comfortable seating and reliable WiFi.` },
+  { question: `How do I add my coffee shop to A Bottom Less Cup?`, answer: `Visit our Submit a Coffee Shop page to add your independent shop to our directory. It's free and easy.` },
+];
+
+const CATEGORY_FAQS = (label) => [
+  { question: `What makes a coffee shop great for ${label.toLowerCase()}?`, answer: `The best ${label.toLowerCase()} coffee shops offer a combination of comfortable seating, reliable WiFi, quality coffee, and a welcoming atmosphere.` },
+  { question: `How are these coffee shops selected?`, answer: `A Bottom Less Cup curates listings based on community submissions, verified features, and editorial review. Every shop is independently owned.` },
+  { question: `Can I filter by city?`, answer: `Yes. Use the search bar or browse our city pages to find ${label.toLowerCase()} coffee shops near you.` },
+  { question: `How do I submit a coffee shop?`, answer: `Visit our Submit a Coffee Shop page to add your favorite independent shop to the directory.` },
+];
 
 export default async function SlugPage({ params }) {
   const { slug } = await params;
   const parsed = parseSlug(slug);
+  const shops = await fetchShops(parsed);
 
-  if (!parsed) notFound();
-
-  const shops = await fetchShopsForPage(parsed);
+  if (parsed.type === 'unknown') {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-stone-800 mb-4">Page Not Found</h1>
+          <Link href="/" className="text-amber-600 hover:underline">Back to Home</Link>
+        </div>
+      </div>
+    );
+  }
 
   const isCity = parsed.type === 'city';
-  const pageTitle = isCity
-    ? `Coffee Shops in ${parsed.city}, ${parsed.state}`
-    : `${parsed.label} Coffee Shops`;
+  const isCategory = parsed.type === 'category';
+  const isCityCategory = parsed.type === 'city_category';
+
+  const title = isCity
+    ? `Independent Coffee Shops in ${parsed.city}, ${parsed.state}`
+    : isCategory
+    ? `${parsed.category.label} Coffee Shops`
+    : `${parsed.category.label} Coffee Shops in ${parsed.city}, ${parsed.state}`;
 
   const intro = isCity
-    ? `Whether you're a remote worker hunting for reliable WiFi, a student looking for a quiet corner, or a traveler wanting to taste the local scene — ${parsed.city} has a rich independent coffee culture worth exploring. Below you'll find a curated list of independently owned coffee shops in ${parsed.city}, ${parsed.state}, each with detailed information on seating, WiFi, noise level, and more so you can find exactly the right spot for your needs.`
-    : `Finding a coffee shop that matches your vibe shouldn't require scrolling through dozens of generic map results. This curated list focuses on independently owned shops known for ${parsed.description} — spaces that were purpose-built for people who care about their environment as much as their espresso. Every listing has been reviewed for the features that matter most.`;
+    ? `Discover the best independent coffee shops in ${parsed.city}, ${parsed.state}. Whether you are looking for a quiet place to work, a cozy spot to catch up with friends, or simply the best espresso in the city, A Bottom Less Cup has you covered. Every listing is independently owned and verified by our community.`
+    : isCategory
+    ? `Find the best ${parsed.category.label.toLowerCase()} coffee shops across the United States. A Bottom Less Cup curates independent shops that match the vibe you are looking for — no chains, no fluff, just great coffee and honest recommendations.`
+    : `Looking for ${parsed.category.label.toLowerCase()} coffee shops in ${parsed.city}, ${parsed.state}? You have come to the right place. A Bottom Less Cup curates the top independent coffee shops that match your vibe and needs — right in your city.`;
 
   const faqs = isCity
-    ? [
-        { q: `What are the best independent coffee shops in ${parsed.city}?`, a: `We've curated a list of the top-rated independent coffee shops in ${parsed.city}, ${parsed.state} based on WiFi reliability, seating comfort, noise level, and overall atmosphere. Browse the listings above to find your perfect match.` },
-        { q: `Which coffee shops in ${parsed.city} have WiFi?`, a: `Many of the shops listed on this page offer free WiFi. Use the WiFi filter to narrow down your options quickly.` },
-        { q: `Are there coffee shops in ${parsed.city} good for remote work?`, a: `Yes — several shops in ${parsed.city} are listed as remote-work friendly with outlets, stable WiFi, and relaxed long-stay policies.` },
-        { q: `How do I submit a coffee shop in ${parsed.city}?`, a: `Use our Submit a Shop form to add a new independent coffee shop to our directory. Submissions are reviewed before going live.` },
-      ]
-    : [
-        { q: `What makes a coffee shop good for ${parsed.label?.toLowerCase()}?`, a: `The best ${parsed.label?.toLowerCase()} coffee shops offer ${parsed.description}. We evaluate each shop based on community feedback and direct verification.` },
-        { q: `How are these coffee shops selected?`, a: `Every shop in our directory is independently owned and verified. We prioritize shops with strong community reputations and accurate, up-to-date information.` },
-        { q: `Can I filter by city too?`, a: `Yes — use the search bar at the top of the browse page to narrow results by city, or explore our city pages for location-specific listings.` },
-        { q: `How do I add my coffee shop to this category?`, a: `Submit your shop using the Submit a Shop form. Make sure to tag it with relevant features so it appears in the right category pages.` },
-      ];
+    ? CITY_FAQS(parsed.city, parsed.state)
+    : CATEGORY_FAQS(parsed.category?.label || 'this category');
+
+  const breadcrumbs = [
+    { label: 'Home', href: '/' },
+    { label: 'Browse', href: '/browse' },
+    { label: isCity ? `${parsed.city}, ${parsed.state}` : parsed.category?.label, href: `/${slug}` },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8]">
-      <SchemaMarkup type="CollectionPage" name={pageTitle} />
+    <>
+      {isCity && (
+        <SchemaMarkup
+          type="city"
+          data={{ city: parsed.city, state: parsed.state, count: shops.length }}
+        />
+      )}
 
-      {/* Header */}
-      <div className="bg-white border-b border-[#E8E0D8]">
-        <div className="max-w-4xl mx-auto px-6 py-12">
-          <nav className="text-sm text-[#9B9B9B] mb-4 flex items-center gap-2">
-            <Link href="/" className="hover:text-[#8B5E3C] transition-colors">Home</Link>
-            <span>/</span>
-            <Link href="/browse" className="hover:text-[#8B5E3C] transition-colors">Browse</Link>
-            <span>/</span>
-            <span className="text-[#1C1410]">{pageTitle}</span>
-          </nav>
-          <h1 className="text-4xl font-bold text-[#1C1410] mb-4">{pageTitle}</h1>
-          <p className="text-[#6B6B6B] leading-relaxed max-w-2xl">{intro}</p>
+      <div className="min-h-screen bg-stone-50">
+        {/* Breadcrumbs */}
+        <div className="bg-white border-b border-stone-200">
+          <div className="max-w-6xl mx-auto px-4 py-3">
+            <nav className="flex items-center gap-2 text-sm text-stone-500">
+              {breadcrumbs.map((crumb, i) => (
+                <span key={i} className="flex items-center gap-2">
+                  {i > 0 && <span>/</span>}
+                  {i === breadcrumbs.length - 1 ? (
+                    <span className="text-stone-700 font-medium">{crumb.label}</span>
+                  ) : (
+                    <Link href={crumb.href} className="hover:text-amber-600 transition-colors">
+                      {crumb.label}
+                    </Link>
+                  )}
+                </span>
+              ))}
+            </nav>
+          </div>
         </div>
-      </div>
 
-      {/* Shop Grid */}
-      <div className="max-w-6xl mx-auto px-6 py-12">
-        {shops.length === 0 ? (
-          <div className="text-center py-16 bg-white rounded-2xl border border-[#E8E0D8]">
-            <p className="text-4xl mb-4">☕</p>
-            <h3 className="text-xl font-semibold text-[#1C1410] mb-2">No shops listed yet</h3>
-            <p className="text-[#6B6B6B] mb-6">Be the first to add a shop in this area.</p>
-            <Link href="/submit"
-              className="inline-block bg-[#C4956A] text-white px-6 py-3 rounded-full font-semibold hover:bg-[#B07D52] transition-colors">
-              Submit a Shop
+        {/* Hero */}
+        <div className="bg-white border-b border-stone-200">
+          <div className="max-w-6xl mx-auto px-4 py-10 md:py-14">
+            <div className="max-w-3xl">
+              {(isCategory || isCityCategory) && (
+                <span className="inline-block bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1 rounded-full mb-4 uppercase tracking-wide">
+                  {parsed.category.label}
+                </span>
+              )}
+              <h1 className="text-3xl md:text-4xl font-bold text-stone-900 mb-4 leading-tight">
+                {title}
+              </h1>
+              <p className="text-stone-600 text-base md:text-lg leading-relaxed mb-4">
+                {intro}
+              </p>
+              <p className="text-sm text-stone-500">
+                {shops.length > 0
+                  ? `Showing ${shops.length} independent coffee shop${shops.length !== 1 ? 's' : ''}`
+                  : 'No listings yet — check back soon or submit one below.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Shop Grid */}
+        <div className="max-w-6xl mx-auto px-4 py-10">
+          <ClientShopGrid initialShops={shops} />
+        </div>
+
+        {/* Internal Links */}
+        <div className="bg-white border-t border-stone-200">
+          <div className="max-w-6xl mx-auto px-4 py-10">
+            <h2 className="text-lg font-semibold text-stone-800 mb-5">
+              {isCity ? 'Browse by Category' : 'Browse by City'}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {isCity
+                ? CATEGORIES.map(cat => (
+                    <Link
+                      key={cat.slug}
+                      href={`/${cat.slug}`}
+                      className="bg-stone-100 hover:bg-amber-50 hover:text-amber-700 text-stone-700 text-sm px-4 py-2 rounded-full transition-colors border border-stone-200"
+                    >
+                      {cat.label}
+                    </Link>
+                  ))
+                : US_CITIES.map(city => (
+                    <Link
+                      key={city.slug}
+                      href={`/${city.slug}`}
+                      className="bg-stone-100 hover:bg-amber-50 hover:text-amber-700 text-stone-700 text-sm px-4 py-2 rounded-full transition-colors border border-stone-200"
+                    >
+                      {city.city}, {city.state}
+                    </Link>
+                  ))}
+            </div>
+          </div>
+        </div>
+
+        {/* FAQ */}
+        <div className="max-w-6xl mx-auto px-4 py-10">
+          <FAQSection faqs={faqs} />
+        </div>
+
+        {/* Submit CTA */}
+        <div className="bg-amber-50 border-t border-amber-100">
+          <div className="max-w-6xl mx-auto px-4 py-10 text-center">
+            <h2 className="text-xl font-bold text-stone-800 mb-2">Know a great coffee shop?</h2>
+            <p className="text-stone-600 mb-5">Help the community discover it. Submissions are free and take less than 2 minutes.</p>
+            <Link
+              href="/submit"
+              className="inline-block bg-amber-600 text-white font-semibold px-6 py-3 rounded-lg hover:bg-amber-700 transition-colors"
+            >
+              Submit a Coffee Shop
             </Link>
           </div>
-        ) : (
-          <>
-            <p className="text-sm text-[#6B6B6B] mb-6">{shops.length} shop{shops.length !== 1 ? 's' : ''} listed</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {shops.map((shop) => (
-                <ShopCard key={shop.id} shop={shop} />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Internal Links */}
-      <div className="bg-[#F4F0EB] py-12">
-        <div className="max-w-4xl mx-auto px-6">
-          <h2 className="text-xl font-semibold text-[#1C1410] mb-6">Explore More</h2>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { label: 'New York', href: '/coffee-shops-new-york-ny' },
-              { label: 'Austin', href: '/coffee-shops-austin-tx' },
-              { label: 'Chicago', href: '/coffee-shops-chicago-il' },
-              { label: 'Seattle', href: '/coffee-shops-seattle-wa' },
-              { label: 'Study Spots', href: '/study-coffee-shops' },
-              { label: 'WiFi Friendly', href: '/coffee-shops-with-wifi' },
-              { label: 'Remote Work', href: '/remote-work-coffee-shops' },
-              { label: 'Aesthetic', href: '/aesthetic-coffee-shops' },
-            ].map((link) => (
-              <Link key={link.href} href={link.href}
-                className="px-4 py-2 bg-white rounded-full text-sm text-[#1C1410] border border-[#E8E0D8] hover:border-[#C4956A] hover:text-[#8B5E3C] transition-all">
-                {link.label}
-              </Link>
-            ))}
-          </div>
         </div>
       </div>
-
-      {/* FAQ */}
-      <FAQSection faqs={faqs} />
-    </div>
+    </>
   );
 }

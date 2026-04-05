@@ -3,6 +3,7 @@
 import { useState, useRef } from 'react';
 import { Upload, CheckCircle, XCircle, AlertCircle, Download, Coffee, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import Papa from 'papaparse';
 
 const REQUIRED_COLUMNS = ['name', 'city', 'state', 'address', 'slug'];
 
@@ -23,34 +24,21 @@ function slugify(text) {
 }
 
 function parseCSV(text) {
-  const lines = text.trim().split('\n');
-  if (lines.length < 2) return { headers: [], rows: [] };
+  const result = Papa.parse(text, {
+    header: true,
+    skipEmptyLines: true,
+    transformHeader: (header) => header.trim().toLowerCase(),
+  });
 
-  const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, '').toLowerCase());
+  if (!result.data || result.data.length === 0) return { headers: [], rows: [] };
 
-  const rows = lines.slice(1).map(line => {
-    const values = [];
-    let current = '';
-    let inQuotes = false;
-
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === ',' && !inQuotes) {
-        values.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-    values.push(current.trim());
-
-    const row = {};
-    headers.forEach((header, i) => {
-      row[header] = values[i] || '';
+  const headers = result.meta.fields;
+  const rows = result.data.map(row => {
+    const cleanedRow = {};
+    headers.forEach(h => {
+      cleanedRow[h] = row[h] || '';
     });
-    return row;
+    return cleanedRow;
   });
 
   return { headers, rows };
@@ -59,14 +47,14 @@ function parseCSV(text) {
 function validateRow(row, index) {
   const errors = [];
   REQUIRED_COLUMNS.forEach(col => {
-    if (!row[col] || row[col].trim() === '') {
+    if (!row[col] || String(row[col]).trim() === '') {
       errors.push(`Row ${index + 2}: Missing required field "${col}"`);
     }
   });
-  if (row.slug && !/^[a-z0-9-]+$/.test(row.slug)) {
+  if (row.slug && !/^[a-z0-9-]+$/.test(String(row.slug))) {
     errors.push(`Row ${index + 2}: Slug "${row.slug}" contains invalid characters (use only lowercase letters, numbers, hyphens)`);
   }
-  if (row.website && row.website.trim() !== '' && !row.website.startsWith('http')) {
+  if (row.website && String(row.website).trim() !== '' && !String(row.website).startsWith('http')) {
     errors.push(`Row ${index + 2}: Website should start with http:// or https://`);
   }
   return errors;
@@ -84,8 +72,8 @@ function transformRow(row) {
     hours: row.hours?.trim() || null,
     tags: row.tags ? row.tags.split(';').map(t => t.trim()).filter(Boolean) : [],
     features: row.features ? row.features.split(';').map(f => f.trim()).filter(Boolean) : [],
-    wifi_yes_no: row.wifi_yes_no ? ['yes', 'true', '1'].includes(row.wifi_yes_no.toLowerCase()) : false,
-    outlets_yes_no: row.outlets_yes_no ? ['yes', 'true', '1'].includes(row.outlets_yes_no.toLowerCase()) : false,
+    wifi_yes_no: row.wifi_yes_no ? ['yes', 'true', '1'].includes(String(row.wifi_yes_no).toLowerCase()) : false,
+    outlets_yes_no: row.outlets_yes_no ? ['yes', 'true', '1'].includes(String(row.outlets_yes_no).toLowerCase()) : false,
     seating_type: row.seating_type?.trim() || null,
     best_for: row.best_for ? row.best_for.split(';').map(b => b.trim()).filter(Boolean) : [],
     noise_level: row.noise_level?.trim() || null,
@@ -94,7 +82,6 @@ function transformRow(row) {
     food_availability: row.food_availability?.trim() || null,
     slug: row.slug?.trim() || slugify(row.name + '-' + row.city),
     image_url: row.image_url?.trim() || null,
-    city_slug: slugify(row.city + '-' + row.state),
     status: 'active',
   };
 }
@@ -412,7 +399,7 @@ export default function AdminContent() {
                 </ul>
                 {validationErrors.some(e => e.startsWith('Missing required columns')) && (
                   <p className="text-xs text-red-600 mt-3 font-medium">
-                    ⚠ Cannot import — required columns are missing. Please fix your CSV and re-upload.
+                    ⚠️ Cannot import — required columns are missing. Please fix your CSV and re-upload.
                   </p>
                 )}
               </div>

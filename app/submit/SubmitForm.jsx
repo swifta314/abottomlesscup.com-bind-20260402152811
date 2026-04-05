@@ -12,7 +12,7 @@ export default function SubmitForm() {
   const [form, setForm] = useState({
     name: '', address: '', city: '', state: '', website: '', phone: '',
     hours: '', description: '', tags: '', wifi_yes_no: false, outlets_yes_no: false,
-    seating_type: '', best_for: '', noise_level: '', food_availability: false,
+    seating_type: '', best_for: '', noise_level: '', food_availability: '',
   });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -44,7 +44,7 @@ export default function SubmitForm() {
         <CheckCircle size={40} className="text-sage-600 mx-auto mb-4" />
         <h2 className="font-display text-2xl text-espresso-800 mb-2">Submission Received!</h2>
         <p className="text-espresso-600 text-sm">
-          We'll review your listing and it'll be live within a few business days.
+          We&apos;ll review your listing and it&apos;ll be live within a few business days.
         </p>
       </div>
     );
@@ -102,20 +102,25 @@ export default function SubmitForm() {
           <input className={INPUT} value={form.best_for} onChange={(e) => set('best_for', e.target.value)} placeholder="studying, meetings, dates" />
         </div>
       </div>
-      <div>
-        <label className={LABEL}>Noise Level</label>
-        <select className={INPUT} value={form.noise_level} onChange={(e) => set('noise_level', e.target.value)}>
-          <option value="">Select...</option>
-          <option value="quiet">Quiet</option>
-          <option value="moderate">Moderate</option>
-          <option value="lively">Lively</option>
-        </select>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className={LABEL}>Noise Level</label>
+          <select className={INPUT} value={form.noise_level} onChange={(e) => set('noise_level', e.target.value)}>
+            <option value="">Select...</option>
+            <option value="quiet">Quiet</option>
+            <option value="moderate">Moderate</option>
+            <option value="lively">Lively</option>
+          </select>
+        </div>
+        <div>
+          <label className={LABEL}>Food Available</label>
+          <input className={INPUT} value={form.food_availability} onChange={(e) => set('food_availability', e.target.value)} placeholder="pastries, full menu, none" />
+        </div>
       </div>
       <div className="flex flex-wrap gap-5">
         {[
           { key: 'wifi_yes_no', label: 'Free WiFi' },
           { key: 'outlets_yes_no', label: 'Power Outlets' },
-          { key: 'food_availability', label: 'Food Available' },
         ].map(({ key, label }) => (
           <label key={key} className="flex items-center gap-2 text-sm text-espresso-700 cursor-pointer">
             <input

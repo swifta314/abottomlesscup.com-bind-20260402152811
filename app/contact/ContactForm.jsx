@@ -27,7 +27,7 @@ export default function ContactForm() {
       <div className="text-center py-16">
         <CheckCircle size={40} className="text-sage-600 mx-auto mb-4" />
         <h2 className="font-display text-2xl text-espresso-800 mb-2">Message Sent</h2>
-        <p className="text-espresso-600 text-sm">We'll get back to you soon.</p>
+        <p className="text-espresso-600 text-sm">We&apos;ll get back to you soon.</p>
       </div>
     );
   }

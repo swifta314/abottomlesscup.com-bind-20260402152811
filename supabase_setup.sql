@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS coffee_shops (
   noise_level TEXT,
   aesthetic_score NUMERIC(3,1),
   coffee_quality NUMERIC(3,1),
-  food_availability BOOLEAN DEFAULT false,
+  food_availability TEXT,
   image_url TEXT,
   featured BOOLEAN DEFAULT false,
   status TEXT DEFAULT 'active',
@@ -62,6 +62,11 @@ CREATE POLICY "Public can read active shops"
 
 CREATE POLICY "Anyone can submit a shop"
   ON coffee_shops FOR INSERT
+  WITH CHECK (true);
+
+CREATE POLICY "Anyone can update a shop"
+  ON coffee_shops FOR UPDATE
+  USING (true)
   WITH CHECK (true);
 
 -- Policies for claim_requests

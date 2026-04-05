@@ -16,7 +16,7 @@ export default function SearchBar() {
   };
 
   return (
-    <form onSubmit={handleSearch} className="flex gap-2 max-w-lg mx-auto">
+    <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto w-full">
       <div className="relative flex-1">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
         <input
@@ -29,7 +29,7 @@ export default function SearchBar() {
       </div>
       <button
         type="submit"
-        className="px-6 py-3.5 bg-[#C4956A] hover:bg-[#B07D52] text-white rounded-xl font-semibold transition-colors"
+        className="px-6 py-3.5 bg-[#C4956A] hover:bg-[#B07D52] text-white rounded-xl font-semibold transition-colors w-full sm:w-auto"
       >
         Search
       </button>

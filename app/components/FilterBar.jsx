@@ -15,7 +15,7 @@ export default function FilterBar({ filters, onChange }) {
 
   return (
     <div className="bg-white rounded-2xl border border-[#E8E0D8] p-5">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {/* State */}
         <div>
           <label className="text-xs font-medium text-[#9B9B9B] uppercase tracking-wide mb-1.5 block">State</label>
@@ -58,7 +58,7 @@ export default function FilterBar({ filters, onChange }) {
         {/* Toggles */}
         <div>
           <label className="text-xs font-medium text-[#9B9B9B] uppercase tracking-wide mb-1.5 block">Features</label>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 pt-1">
             <label className="flex items-center gap-2 cursor-pointer">
               <button
                 onClick={() => toggle('wifi')}

@@ -1,31 +1,22 @@
 import { Inter, Playfair_Display } from 'next/font/google';
 import './globals.css';
-import Navbar from '@/app/components/Navbar';
-import Footer from '@/app/components/Footer';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-  display: 'swap',
-});
-
-const playfair = Playfair_Display({
-  subsets: ['latin'],
-  variable: '--font-playfair',
-  display: 'swap',
-});
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const playfair = Playfair_Display({ subsets: ['latin'], variable: '--font-playfair' });
 
 export const metadata = {
-  title: 'Brew Guide — Discover Independent Coffee Shops Across the U.S.',
-  description: 'Find the best independent coffee shops in your city. Filter by WiFi, outlets, seating, vibe, and more.',
+  title: 'A Bottom Less Cup — Discover Independent Coffee Shops Across the US',
+  description: 'Find independent coffee shops by city, vibe, and features. Filter by WiFi, outlets, seating and more.',
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
-      <body className="bg-stone-50 text-stone-900 font-sans antialiased">
+      <body className="font-sans bg-stone-50 text-stone-900 antialiased">
         <Navbar />
-        <main>{children}</main>
+        <main className="min-h-screen">{children}</main>
         <Footer />
       </body>
     </html>

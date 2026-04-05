@@ -20,12 +20,12 @@ const CATEGORIES = [
 export default function Footer() {
   return (
     <footer className="bg-[#1C1410] text-white">
-      <div className="max-w-6xl mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-4 gap-10">
+      <div className="max-w-6xl mx-auto px-6 py-10 md:py-14 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-10">
         {/* Brand */}
-        <div className="col-span-2 md:col-span-1">
+        <div className="col-span-1 sm:col-span-2 md:col-span-1">
           <Link href="/" className="flex items-center gap-2 font-bold text-xl mb-3">
             <span className="text-2xl">☕</span>
-            <span>Brew <span className="text-[#C4956A]">Guide</span></span>
+            <span>A Bottom Less <span className="text-[#C4956A]">Cup</span></span>
           </Link>
           <p className="text-white/50 text-sm leading-relaxed">
             The curated directory for independent coffee shops across the United States.
@@ -66,6 +66,7 @@ export default function Footer() {
               { name: 'Claim a Listing', href: '/claim' },
               { name: 'About', href: '/about' },
               { name: 'Contact', href: '/contact' },
+              { name: 'Admin (CSV Import)', href: '/admin' },
             ].map((l) => (
               <li key={l.href}>
                 <Link href={l.href} className="text-sm text-white/60 hover:text-white transition-colors">{l.name}</Link>
@@ -76,7 +77,7 @@ export default function Footer() {
       </div>
       <div className="border-t border-white/10 py-5">
         <p className="text-center text-xs text-white/30">
-          © {new Date().getFullYear()} Brew Guide · Independent Coffee Shop Directory
+          © {new Date().getFullYear()} A Bottom Less Cup · Independent Coffee Shop Directory
         </p>
       </div>
     </footer>
